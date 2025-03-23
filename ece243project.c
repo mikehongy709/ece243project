@@ -41,6 +41,9 @@ void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2,
 void draw_chess_piece(struct chess* c);
 void process_player(struct chess* c);
 void process_platform(struct platform* p);
+bool is_on_platform(int x, struct platform p);
+void reset_game();
+void show_game_over();
 
 int difficulty;
 int moving_speed;
@@ -59,6 +62,8 @@ int press_duration;
 int jump_distance;
 int initial_distance;
 bool is_pressed;
+bool landed = true;
+bool game_over = false;
 
 
 int main(void)
@@ -98,7 +103,18 @@ int main(void)
 	
 	
     while (1) {
-		clear_screen();
+      if (game_over) {
+        show_game_over();
+      }else{
+        clear_screen();
+      }
+  
+      int restart = *key_ptr & 0x02;
+  
+      if (restart != 0) {
+        reset_game();
+        while (*key_ptr & 0x02) {}
+    }    
 		
 		int key_status = *key_ptr & 0x01;
     if (key_status != 0) {
@@ -124,6 +140,7 @@ int main(void)
 		initial_distance = jump_distance;
 
         is_pressed = false;
+        landed = false;
       }
     }
 
@@ -143,7 +160,20 @@ int main(void)
 			jump_distance = 0;
 			player.y = 132;
 		}
+    if (jump_distance <= 0 && landed == false) {
+      int piece_x = 10 + initial_distance;
+      if (!(is_on_platform(piece_x, p1) || is_on_platform(piece_x, p2) || is_on_platform(piece_x, p3))) {
+          game_over = true;
+      } else {
+          landed = true;
+      }
+  }
+
+
 		draw_chess_piece(&player);
+    if(game_over){
+      show_game_over();
+    }
 		wait_sync();
 		pixel_buffer_start = *(pixel_crtl_ptr + 1);
 	}
@@ -365,4 +395,115 @@ void process_player(struct chess* p) {
   }
 }
 
+bool is_on_platform(int x, struct platform p) {
+  int platform_left = p.pos - p.width / 2;
+  int platform_right = p.pos + p.width / 2;
 
+  if (x >= platform_left && x <= platform_right) {
+    return true;
+  }
+  return false;
+}
+
+void reset_game() {
+  game_over = false;
+  landed = true;
+  jump_distance = 0;
+  initial_distance = 0;
+  is_pressed = false;
+  player.y = 131;
+
+  pos1 = 250;
+  pos2 = 150;
+  pos3 = 10;
+  width1 = rand() % difficulty + 10;
+  width2 = rand() % difficulty + 10;
+  width3 = rand() % difficulty + 10;
+
+  p1.pos = pos1;
+  p2.pos = pos2;
+  p3.pos = pos3;
+  p1.width = width1;
+  p2.width = width2;
+  p3.width = width3;
+}
+
+
+void show_game_over() {
+  clear_screen();
+  
+  draw_rect(60, 60, 150, 150, 0xF800);
+  
+  // G
+  draw_rect(80, 100, 5, 20, 0xFFFF);  // left
+  draw_rect(80, 100, 20, 5, 0xFFFF);  // top
+  draw_rect(80, 120, 20, 5, 0xFFFF);  // bottom
+  draw_rect(95, 110, 5, 15, 0xFFFF);  // right
+  draw_rect(90, 110, 10, 5, 0xFFFF);  // middle
+
+  // A
+  draw_rect(110, 100, 20, 5, 0xFFFF);  // top
+  draw_rect(110, 100, 5, 25, 0xFFFF);  // left
+  draw_rect(125, 100, 5, 25, 0xFFFF);  // right
+  draw_rect(110, 110, 20, 5, 0xFFFF);  // middle
+  
+  // M
+  draw_rect(140, 100, 5, 25, 0xFFFF);  // left
+  draw_rect(160, 100, 5, 25, 0xFFFF);  // right
+  // left thick line
+  draw_line(145, 100, 153, 110, 0xFFFF);
+  draw_line(144, 100, 152, 110, 0xFFFF);
+  draw_line(146, 100, 154, 110, 0xFFFF);
+  draw_line(143, 100, 151, 110, 0xFFFF);
+  draw_line(147, 100, 155, 110, 0xFFFF);
+  // right thick line
+  draw_line(150, 110, 160, 100, 0xFFFF);
+  draw_line(149, 110, 159, 100, 0xFFFF);
+  draw_line(151, 110, 161, 100, 0xFFFF);
+  draw_line(148, 110, 158, 100, 0xFFFF);
+  draw_line(152, 110, 162, 100, 0xFFFF);
+  
+  // E
+  draw_rect(175, 100, 5, 25, 0xFFFF);  // left
+  draw_rect(175, 100, 20, 5, 0xFFFF);  // top
+  draw_rect(175, 110, 15, 5, 0xFFFF);  // middle
+  draw_rect(175, 120, 20, 5, 0xFFFF);  // bottom
+  
+  // O
+  draw_rect(80, 140, 5, 25, 0xFFFF);  // left
+  draw_rect(100, 140, 5, 25, 0xFFFF);  // right
+  draw_rect(80, 140, 25, 5, 0xFFFF);   // top
+  draw_rect(80, 160, 25, 5, 0xFFFF);   // bottom
+  
+  // V
+  // left line thick
+  draw_line(110, 140, 120, 160, 0xFFFF);
+  draw_line(109, 140, 119, 160, 0xFFFF);
+  draw_line(111, 140, 121, 160, 0xFFFF);
+  draw_line(108, 140, 118, 160, 0xFFFF);
+  draw_line(112, 140, 122, 160, 0xFFFF);
+  // right line thick
+  draw_line(120, 160, 130, 140, 0xFFFF);
+  draw_line(119, 160, 129, 140, 0xFFFF);
+  draw_line(121, 160, 131, 140, 0xFFFF);
+  draw_line(118, 160, 128, 140, 0xFFFF);
+  draw_line(122, 160, 132, 140, 0xFFFF);
+  
+  // E
+  draw_rect(140, 140, 5, 25, 0xFFFF);  // left
+  draw_rect(140, 140, 20, 5, 0xFFFF);  // top
+  draw_rect(140, 150, 15, 5, 0xFFFF);  // middle
+  draw_rect(140, 160, 20, 5, 0xFFFF);  // bottom
+  
+  // R
+  draw_rect(170, 140, 5, 25, 0xFFFF);  // left
+  draw_rect(170, 140, 20, 5, 0xFFFF);  // top
+  draw_rect(170, 150, 20, 5, 0xFFFF);  // middle
+  draw_rect(185, 140, 5, 15, 0xFFFF);  // right
+  // right thick line
+  draw_line(175, 150, 190, 165, 0xFFFF);
+  draw_line(174, 150, 189, 165, 0xFFFF);
+  draw_line(176, 150, 191, 165, 0xFFFF);
+  draw_line(177, 150, 192, 165, 0xFFFF);
+  draw_line(173, 150, 188, 165, 0xFFFF);
+}
