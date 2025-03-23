@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include <stdbool.h>
+#include "image.h"
 #define SCREEN_HEIGHT 240
 #define SCREEN_WIDTH 320
 #define KEY_BASE 0xFF200050
@@ -44,6 +45,7 @@ void process_platform(struct platform* p);
 bool is_on_platform(int x, struct platform p);
 void reset_game();
 void show_game_over();
+void draw_image(const unsigned short int pixels[240][320], int h, int w);
 
 int difficulty;
 int moving_speed;
@@ -178,6 +180,16 @@ int main(void)
 		pixel_buffer_start = *(pixel_crtl_ptr + 1);
 	}
 }    
+
+void draw_image(const unsigned short int pixels[240][320], int h, int w) {
+  for (int i = 0; i < h; i++) {
+    for (int j = 0; j < w; j++) {
+      int x = j;
+      int y = i;
+      plot_pixel(x, y, pixels[i][j]);
+    }
+  }
+}
 
 void plot_pixel(int x, int y, short int line_color)
 {
