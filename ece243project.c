@@ -4,6 +4,20 @@
 #define SCREEN_HEIGHT 240
 #define SCREEN_WIDTH 320
 #define KEY_BASE 0xFF200050
+	
+struct platform{
+	int height;
+	int width;
+	int pos;
+	short int color; 
+};
+
+struct chess{
+  int x;
+  int y;
+  int size;
+  short int color;
+};
 
 volatile int pixel_buffer_start; // global variable
 short int Buffer1[240][512]; // 240 rows, 512 (320 + padding) columns
@@ -18,21 +32,34 @@ void wait_sync();
 void draw_line(int x0, int y0, int x1, int y1, short int color);
 void swap(int* a, int *b);
 void draw_rect(int x0, int y0, int height, int width, short int color);
-void draw_platform(int height, int width, int pos, short int color);
+void draw_platform(struct platform* p);
 int get_time_ms();
 int get_jump_height();
 void draw_circle(int x, int y, int radius, short int color);
 void draw_triangle(int x0, int y0, int x1, int y1, int x2, int y2,
                    short int color);
-void draw_chess_piece(int x, int y, int size, short int color);
+void draw_chess_piece(struct chess* c);
+void process_player(struct chess* c);
+void process_platform(struct platform* p);
 
+int difficulty;
+int moving_speed;
+int pos1;
+int pos2;
+int pos3;
+int width1;
+int width2;
+int width3;
+struct platform p1 = {100, 0, 0, 0xffff};
+struct platform p2 = {100, 0, 0, 0xffff};
+struct platform p3 = {100, 0, 0, 0xffff};
+struct chess player = {10, 131, 16, 0xff00};
+int press_start;
+int press_duration;
+int jump_distance;
+int initial_distance;
+bool is_pressed;
 
-struct platform{
-	int height;
-	int width;
-	int pos;
-	short int color; 
-};
 
 int main(void)
 {
@@ -48,24 +75,26 @@ int main(void)
     *(pixel_crtl_ptr + 1) = (int) &Buffer2;
     pixel_buffer_start = *(pixel_crtl_ptr + 1); // we draw on the back buffer
     clear_screen(); // pixel_buffer_start points to the pixel buffer
-	int difficulty = 50;
-	
-	int moving_speed = 5;
-	int pos1 = 250;
-	int pos2 = 150;
-	int pos3 = 10;
-	int width1 = rand() % difficulty + 10;
-	int width2 = rand() % difficulty + 10;
-	int width3 = rand() % difficulty + 10;
-	struct platform p1 = {100, width1, pos1, 0xffff};
-	struct platform p2 = {100, width2, pos2, 0xffff};
-	struct platform p3 = {100, width3, pos3, 0xffff};
-	
-	int press_start = 0;
-  	int press_duration = 0;
-  	int jump_distance = 0;
-	int initial_distance;
-  	bool is_pressed = false;
+   difficulty = 50;
+   moving_speed = 5;
+   pos1 = 250;
+   pos2 = 150;
+   pos3 = 10;
+	width1 = rand() % difficulty + 10;
+	 width2 = rand() % difficulty + 10;
+	 width3 = rand() % difficulty + 10;
+	p1.width = width1;
+  p2.width = width2;
+  p3.width = width3;
+  p1.pos = pos1;
+  p2.pos = pos2;
+  p3.pos = pos3;
+  
+	press_start = 0;
+  press_duration = 0;
+  jump_distance = 0;
+	initial_distance = 0;
+  is_pressed = false;
 	
 	
     while (1) {
@@ -99,29 +128,22 @@ int main(void)
     }
 
 		
-		int move = *Switches & 1;
-		draw_platform(100, width1, pos1, 0xffff);
-		draw_platform(100, width2, pos2, 0xffff);
-		draw_platform(100, width3, pos3, 0xffff);
-		if (move || jump_distance >= 0) {
-			pos1 -= moving_speed;
-			pos2 -= moving_speed;
-			pos3 -= moving_speed;
-			jump_distance -= moving_speed;
+		
+		draw_platform(&p1);
+		draw_platform(&p2);
+		draw_platform(&p3);
+    process_platform(&p1);
+    process_platform(&p2);
+    process_platform(&p3);
+    
+		
+    	process_player(&player);
+		jump_distance -= moving_speed;
+		if (jump_distance <= 0) { 
+			jump_distance = 0;
+			player.y = 132;
 		}
-		if (pos1 + width1 / 2 <= 0) {
-			width1 = rand() % difficulty + 10;
-			pos1 = SCREEN_WIDTH + width1 / 2;
-		}
-		if (pos2 + width2 / 2 <= 0) {
-			width2 = rand() % difficulty + 10;
-			pos2 = SCREEN_WIDTH + width2 / 2;
-		}
-		if (pos3 + width3 / 2 <= 0) {
-			width3 = rand() % difficulty + 10;
-			pos3 = SCREEN_WIDTH + width3 / 2;
-		}
-		draw_chess_piece(10, get_jump_height(jump_distance, initial_distance) - 10, 15, 0xff00);
+		draw_chess_piece(&player);
 		wait_sync();
 		pixel_buffer_start = *(pixel_crtl_ptr + 1);
 	}
@@ -212,10 +234,10 @@ void draw_rect(int x0, int y0, int height, int width, short int color) {
 	}
 }
 
-void draw_platform(int height, int width, int pos, short int color) {
-	for (int i = 0; i < height; i++) {
-		for (int j = 0; j < width; j++) {
-			plot_pixel(pos + (j - width / 2), SCREEN_HEIGHT - 1 - i, color);
+void draw_platform(struct platform* p){
+	for (int i = 0; i < p->height; i++) {
+		for (int j = 0; j < p->width; j++) {
+			plot_pixel(p->pos + (j - p->width / 2), SCREEN_HEIGHT - 1 - i, p->color);
 		}
 	}
 }
@@ -228,12 +250,11 @@ int get_time_ms() {
 }
 
 int get_jump_height(int jump, int initial) {
-	if (jump < initial / 2) {
-		return 140 - (jump * jump) / 50;
-	} else {
-		return 140 - (jump - initial) * (jump - initial) / 50;
-	}
-	return 0;
+	int t0 = initial / moving_speed;
+	int v = 0.3 * t0;
+	int t = (initial - jump) * t0 / initial;
+  	return v * t - 0.3 * t * t;
+	//return 0;
 }
 
 
@@ -304,28 +325,44 @@ void draw_circle(int x, int y, int radius, short int color) {
   }
 }
 
-void draw_chess_piece(int x, int y, int size, short int color) {
-  int head_radius = size / 4;
-  int body_width = size / 2;
-  int body_height = size / 3;
-  int base_width = size * 3 / 4;
-  int base_height = size / 3;
+void draw_chess_piece(struct chess* p) {
+  int head_radius = p->size / 4;
+  int body_width = p->size / 2;
+  int body_height = p->size / 3;
+  int base_width = p->size * 3 / 4;
+  int base_height = p->size / 3;
 
   int total_height = head_radius * 2 + body_height + base_height;
-  int head_y = y - total_height / 2 + head_radius;
+  int head_y = p->y - total_height / 2 + head_radius;
 
   int body_y = head_y + head_radius;
   int base_y = body_y + body_height;
 
-  draw_circle(x, head_y, head_radius, color);
+  draw_circle(p->x, head_y, head_radius, p->color);
 
-  int body_x = x - body_width / 2;
-  draw_rect(body_x, body_y, body_width, body_height, color);
+  int body_x = p->x - body_width / 2;
+  draw_rect(body_x, body_y, body_width, body_height, p->color);
 
-  int base_x1 = x - base_width / 2;
-  int base_x2 = x + base_width / 2;
+  int base_x1 = p->x - base_width / 2;
+  int base_x2 = p->x + base_width / 2;
   int base_y2 = base_y + base_height;
-  draw_triangle(base_x1, base_y2, base_x2, base_y2, x, base_y, color);
+  draw_triangle(base_x1, base_y2, base_x2, base_y2, p->x, base_y, p->color);
+}
+
+void process_platform(struct platform* p) {
+  if (jump_distance > 0) {
+    p->pos -= moving_speed;
+  }
+  if (p->pos + p->width / 2 <= 0) {
+    p->width = rand() % difficulty + 10;
+    p->pos = SCREEN_WIDTH + p->width / 2;
+  }
+}
+
+void process_player(struct chess* p) {
+  if (jump_distance > 0) {
+    p->y = 131 - get_jump_height(jump_distance, initial_distance);
+  }
 }
 
 
