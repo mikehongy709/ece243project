@@ -6,10 +6,10 @@ if [[ $# -ne 1 ]]; then
 fi
 
 IMAGE_PATH="$1"
-if [[ ! -f "$IMAGE_PATH" ]]; then
-    echo "图片\"$IMAGE_PATH\" 不存在"
-    exit 1
-fi
+# if [[ ! -f "$IMAGE_PATH" ]]; then
+#     echo "图片\"$IMAGE_PATH\" 不存在"
+#     exit 1
+# fi
 
 javac ImageToArray.java
 if [[ $? -ne 0 ]]; then
