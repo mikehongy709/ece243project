@@ -21,7 +21,7 @@ public class ImageToArray {
 
             int width = image.getWidth();
             int height = image.getHeight();
-
+            System.out.println("size : " + width + " * " + height + "\n");
             // if (width != 300 || height != 240) {
             //     System.out.println("非240*320");
             //     return;
