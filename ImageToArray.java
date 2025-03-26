@@ -31,7 +31,7 @@ public class ImageToArray {
             FileWriter writer = new FileWriter("/Users/yufeihong/Desktop/ece243/243Project/utility/" + name + ".h");
 
             writer.write("#ifndef " + name + "_H\n#define " + name + "_H\n\n");
-            writer.write("const unsigned short " + name+ "_image_pixels[240][320] = {\n");
+            writer.write("const unsigned short " + name + "[240][320] = {\n");
 
             for (int y = 0; y < 240; y++) {
                 writer.write("    {");
@@ -45,7 +45,11 @@ public class ImageToArray {
                     int red = (rgb >> 16) & 0xFF;
                     int green = (rgb >> 8) & 0xFF;
                     int blue = rgb & 0xFF;
+                    int threshold = 200;
                     int pixel565 = ((red >> 3) << 11) | ((green >> 2) << 5) | (blue >> 3);
+                    if (red >= threshold && (green >= threshold && blue >= threshold)) {
+                        pixel565 = 0xffff;
+                    }
                     writer.write(String.format("0x%04X", pixel565));
                     if (x < 320 - 1) writer.write(", ");
                 }
