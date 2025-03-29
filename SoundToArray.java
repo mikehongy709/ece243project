@@ -68,11 +68,15 @@ public class SoundToArray {
 
     for (int i = 0; i < sampleCount; i++) {
         int sampleStart = i * sampleSize;
-
-        int sampleValue = ((audioBytes[sampleStart + 3] << 24) |
-                ((audioBytes[sampleStart + 2] & 0xFF) << 16) |
-                ((audioBytes[sampleStart + 1] & 0xFF) << 8)  |
-                (audioBytes[sampleStart] & 0xFF));
+        int sampleValue = 0;
+        if (sampleSize == 4) {
+            sampleValue = ((audioBytes[sampleStart + 3] << 24) |
+                    ((audioBytes[sampleStart + 2] & 0xFF) << 16) |
+                    ((audioBytes[sampleStart + 1] & 0xFF) << 8)  |
+                    (audioBytes[sampleStart] & 0xFF));
+        } else if (sampleSize == 2) {
+            sampleValue = ((audioBytes[sampleStart + 1] & 0xFF) << 8)  | (audioBytes[sampleStart] & 0xFF);;
+        }
 
         audioData[i] = sampleValue;
     }
